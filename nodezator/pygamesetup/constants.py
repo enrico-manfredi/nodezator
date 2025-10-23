@@ -105,7 +105,7 @@ set_repeat(
 
 ### create/set screen
 
-SIZE = (1280, 720)
+SIZE = (1280, 800)
 
 
 ## under the circumstances in the if-block below, set_mode() raises
