@@ -87,8 +87,24 @@ def toggle_caption(indicate_saved):
     set_caption(title, icontitle)
 
 
-indicate_saved = partial(toggle_caption, True)
-indicate_unsaved = partial(toggle_caption, False)
+def indicate_saved():
+    """Update caption to reflect saved state."""
+
+    toggle_caption(True)
+
+
+def indicate_unsaved(description=None, *, record=True):
+    """Update caption to reflect unsaved state and record history."""
+
+    toggle_caption(False)
+
+    if not record:
+        return
+
+    history = getattr(APP_REFS, "history", None)
+
+    if history is not None:
+        history.capture(description)
 
 
 @contextmanager
@@ -118,7 +134,7 @@ def saved_or_unsaved_state_kept():
             indicate_saved()
 
         elif not changes_were_saved and changes_are_saved:
-            indicate_unsaved()
+            indicate_unsaved(record=False)
 
 
 def get_current_fps():

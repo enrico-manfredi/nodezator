@@ -61,6 +61,8 @@ APP_REFS = SimpleNamespace(
     ## flag to check need to save system testing settings
     ## at end of testing session
     system_testing_set=False,
+    ## placeholder for the graph history manager
+    history=None,
 )
 
 

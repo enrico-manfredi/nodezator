@@ -772,6 +772,11 @@ class FileOperations:
         """
         save_pyl(APP_REFS.data, APP_REFS.source_path)
 
+        history = getattr(APP_REFS, "history", None)
+
+        if history is not None:
+            history.mark_current_saved()
+
     def reload(self):
         """Reload current file."""
         ### the reloading mechanism doesn't apply to temporary files;
@@ -845,3 +850,8 @@ class FileOperations:
         ### also clean up data from a possible previous
         ### session thay may still exist
         APP_REFS.data.clear()
+
+        history = getattr(APP_REFS, "history", None)
+
+        if history is not None:
+            history.reset(None)
