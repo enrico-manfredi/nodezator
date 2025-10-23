@@ -84,13 +84,24 @@ class LoadedFileState:
 
             elif event.type == MOUSEWHEEL:
 
-                x, y = event.x*50, event.y*50
                 mod = SERVICES_NS.get_pressed_mod_keys()
 
-                if  mod & KMOD_SHIFT:
-                    x, y = y, x
+                if mod & KMOD_CTRL:
 
-                APP_REFS.ea.scroll(x, y)
+                    zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+
+                    if zoom_manager is not None:
+                        anchor_world = SERVICES_NS.get_mouse_pos()
+                        zoom_manager.change_zoom(event.y, anchor_world)
+
+                else:
+
+                    x, y = event.x*50, event.y*50
+
+                    if mod & KMOD_SHIFT:
+                        x, y = y, x
+
+                    APP_REFS.ea.scroll(x, y)
 
             ### MOUSEMOTION
 

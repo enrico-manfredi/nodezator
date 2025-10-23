@@ -31,13 +31,14 @@ from pygame.mouse import (
     get_pressed as mouse_get_pressed,
 
     # check note [1] at the bottom
-    set_pos as set_mouse_pos,
+    set_pos as pygame_set_mouse_pos,
 
     # check note [2] at the bottom
     set_visible as set_mouse_visibility,
 )
 
 from pygame.display import set_mode, update
+from pygame.math import Vector2
 
 
 ### local imports
@@ -54,6 +55,7 @@ from ...textman.render import render_text
 
 from ..constants import (
 
+    SCREEN,
     SCREEN_RECT, blit_on_screen,
     GENERAL_NS,
     GENERAL_SERVICE_NAMES,
@@ -71,6 +73,34 @@ from ..constants import (
     MOD_KEYS_MAP,
 
 )
+
+from ...config import APP_REFS
+
+
+EDITING_STATES = {
+    'loaded_file',
+    'moving_object',
+    'segment_definition',
+    'segment_severance',
+    'box_selection',
+    'birdseye_view',
+}
+
+
+def _should_apply_zoom():
+    zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+    window_manager = getattr(APP_REFS, 'wm', None)
+
+    return (
+        zoom_manager is not None
+        and zoom_manager.scale != 1.0
+        and window_manager is not None
+        and getattr(window_manager, 'state_name', '') in EDITING_STATES
+    )
+
+
+def _convert_to_int_pair(vector):
+    return int(round(vector.x)), int(round(vector.y))
 
 
 
@@ -303,6 +333,10 @@ def get_events():
         elif event.type == KEYUP and event.key == K_F8:
             continue
 
+        if _should_apply_zoom() and event.type in (pygame_locals.MOUSEBUTTONDOWN, pygame_locals.MOUSEBUTTONUP, pygame_locals.MOUSEMOTION):
+            adjusted = APP_REFS.zoom_manager.screen_to_world(Vector2(event.pos))
+            event.pos = _convert_to_int_pair(adjusted)
+
         ### record event
 
         EVENTS_MAP[GENERAL_NS.frame_index].append([
@@ -340,13 +374,25 @@ def get_pressed_mod_keys():
 
 def get_mouse_pos():
     # get mouse pos
-    pos = get_pos()
+    pos = Vector2(get_pos())
+
+    if _should_apply_zoom():
+        pos = APP_REFS.zoom_manager.screen_to_world(pos)
 
     # record it
-    append_mouse_pos_request(pos)
+    append_mouse_pos_request(_convert_to_int_pair(pos))
 
     # return it
-    return pos
+    return _convert_to_int_pair(pos)
+
+def set_mouse_pos(pos):
+    target = Vector2(pos)
+
+    if _should_apply_zoom():
+        target = APP_REFS.zoom_manager.world_to_screen(target)
+
+    pygame_set_mouse_pos(_convert_to_int_pair(target))
+
 
 def get_mouse_pressed():
     # get mouse pressed tuple
@@ -362,10 +408,15 @@ def get_mouse_pressed():
 
 def update_screen():
 
+    zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+
     ### blit labels
 
     for label in LABELS:
         blit_on_screen(label.image, label.rect)
+
+    if zoom_manager is not None and _should_apply_zoom():
+        zoom_manager.apply(SCREEN)
 
     ### update the screen (pygame.display.update())
     update()

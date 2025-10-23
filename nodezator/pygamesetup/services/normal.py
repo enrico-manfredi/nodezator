@@ -11,7 +11,7 @@ from pygame.version import vernum as pygame_vernum
 
 from pygame.display import set_mode
 
-from pygame.event import get as get_events, set_allowed
+from pygame.event import get as pygame_get_events, set_allowed
 
 from pygame.key import (
     get_pressed as get_pressed_keys,
@@ -21,12 +21,14 @@ from pygame.key import (
 
 from pygame.mouse import (
     set_visible as set_mouse_visibility,
-    get_pos as get_mouse_pos,
-    set_pos as set_mouse_pos,
+    get_pos as pygame_get_pos,
+    set_pos as pygame_set_pos,
     get_pressed as get_mouse_pressed,
 )
 
-from pygame.display import update as update_screen
+from pygame.display import update as pygame_update
+from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.math import Vector2
 
 
 ### local imports
@@ -41,6 +43,71 @@ from ..constants import (
     maintain_fps,
     watch_window_size,
 )
+
+from ...config import APP_REFS
+
+
+EDITING_STATES = {
+    'loaded_file',
+    'moving_object',
+    'segment_definition',
+    'segment_severance',
+    'box_selection',
+    'birdseye_view',
+}
+
+
+def _should_apply_zoom():
+    zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+    window_manager = getattr(APP_REFS, 'wm', None)
+
+    return (
+        zoom_manager is not None
+        and window_manager is not None
+        and getattr(window_manager, 'state_name', '') in EDITING_STATES
+        and zoom_manager.scale != 1.0
+    )
+
+
+def _convert_to_int_pair(vector):
+    return int(round(vector.x)), int(round(vector.y))
+
+
+def get_events():
+    events = pygame_get_events()
+
+    if not events:
+        return events
+
+    if not _should_apply_zoom():
+        return events
+
+    zoom_manager = APP_REFS.zoom_manager
+
+    for event in events:
+        if event.type in (MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION):
+            adjusted = zoom_manager.screen_to_world(Vector2(event.pos))
+            event.pos = _convert_to_int_pair(adjusted)
+
+    return events
+
+
+def get_mouse_pos():
+    pos = Vector2(pygame_get_pos())
+
+    if _should_apply_zoom():
+        pos = APP_REFS.zoom_manager.screen_to_world(pos)
+
+    return _convert_to_int_pair(pos)
+
+
+def set_mouse_pos(pos):
+    target = Vector2(pos)
+
+    if _should_apply_zoom():
+        target = APP_REFS.zoom_manager.world_to_screen(target)
+
+    pygame_set_pos(_convert_to_int_pair(target))
 
 
 
@@ -117,3 +184,12 @@ def frame_checkups_with_fps(fps):
 
     ### keep an eye on the window size
     watch_window_size()
+
+
+def update_screen():
+    zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+
+    if zoom_manager is not None and _should_apply_zoom():
+        zoom_manager.apply(SCREEN)
+
+    pygame_update()

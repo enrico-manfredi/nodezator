@@ -40,6 +40,10 @@ from pygame.key import (
 )
 
 
+### local import
+from ...config import APP_REFS
+
+
 ### local imports
 
 from ...pygamesetup import SERVICES_NS, SCREEN_RECT
@@ -512,7 +516,14 @@ class IntFloatModes(Object2D):
             self.dragging_origin_x = SCREEN_RECT.centerx
 
         ### finally center the mouse in the screen
-        SERVICES_NS.set_mouse_pos(SCREEN_RECT.center)
+        zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+
+        if zoom_manager and zoom_manager.scale != 1.0:
+            target = zoom_manager.screen_to_world(Vector2(SCREEN_RECT.center))
+        else:
+            target = SCREEN_RECT.center
+
+        SERVICES_NS.set_mouse_pos(target)
 
     def change_shift_influence(self, shift_pressed):
         """Perform setups according to state of shift key.
@@ -594,7 +605,14 @@ class IntFloatModes(Object2D):
         SERVICES_NS.set_mouse_visibility(False)
 
         ### position the mouse at the center of the screen
-        SERVICES_NS.set_mouse_pos(SCREEN_RECT.center)
+        zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+
+        if zoom_manager and zoom_manager.scale != 1.0:
+            target = zoom_manager.screen_to_world(Vector2(SCREEN_RECT.center))
+        else:
+            target = SCREEN_RECT.center
+
+        SERVICES_NS.set_mouse_pos(target)
 
         ### define the influence of the state of the
         ### shift key in how the value displayed is
@@ -613,7 +631,14 @@ class IntFloatModes(Object2D):
 
     def perform_mouse_edition_exit_setups(self):
         """Restore mouse settings and clean attributes."""
-        SERVICES_NS.set_mouse_pos(self.initial_mouse_pos)
+        zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+
+        if zoom_manager and zoom_manager.scale != 1.0:
+            target = zoom_manager.screen_to_world(Vector2(self.initial_mouse_pos))
+        else:
+            target = self.initial_mouse_pos
+
+        SERVICES_NS.set_mouse_pos(target)
         SERVICES_NS.set_mouse_visibility(True)
 
         del self.base_value

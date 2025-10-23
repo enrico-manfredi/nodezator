@@ -81,6 +81,32 @@ from ..constants import (
 )
 
 
+EDITING_STATES = {
+    'loaded_file',
+    'moving_object',
+    'segment_definition',
+    'segment_severance',
+    'box_selection',
+    'birdseye_view',
+}
+
+
+def _should_apply_zoom():
+    zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+    window_manager = getattr(APP_REFS, 'wm', None)
+
+    return (
+        zoom_manager is not None
+        and zoom_manager.scale != 1.0
+        and window_manager is not None
+        and getattr(window_manager, 'state_name', '') in EDITING_STATES
+    )
+
+
+def _convert_to_int_pair(vector):
+    return int(round(vector.x)), int(round(vector.y))
+
+
 
 ### dictionary to store session data
 SESSION_DATA = {}
@@ -693,7 +719,13 @@ def set_mouse_pos(pos):
     ###
     ### this is done so that the real mouse traces the movement of the
     ### virtual one
-    PLAY_REFS.mouse_tracing and set_pos(pos)
+    if PLAY_REFS.mouse_tracing:
+        target = Vector2(pos)
+
+        if _should_apply_zoom():
+            target = APP_REFS.zoom_manager.world_to_screen(target)
+
+        set_pos(_convert_to_int_pair(target))
 
 
 ## processing mouse button pressed state;
@@ -721,6 +753,11 @@ def update_screen():
 
     for label in LABELS:
         blit_on_screen(label.image, label.rect)
+
+    zoom_manager = getattr(APP_REFS, 'zoom_manager', None)
+
+    if zoom_manager is not None and _should_apply_zoom():
+        zoom_manager.apply(SCREEN)
 
     ### update the screen
     update()

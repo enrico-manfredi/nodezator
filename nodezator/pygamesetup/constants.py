@@ -64,6 +64,8 @@ else:
 
 from ..config import APP_REFS, DATA_DIR
 
+from .zoom import ZoomManager
+
 from ..appinfo import FULL_TITLE, ABBREVIATED_TITLE
 
 from ..loopman.exception import QuitAppException
@@ -126,6 +128,8 @@ else:
 
 SCREEN_RECT = SCREEN.get_rect()
 blit_on_screen = SCREEN.blit
+
+APP_REFS.zoom_manager = ZoomManager(SCREEN_RECT.size)
 
 
 
@@ -345,6 +349,7 @@ def watch_window_size():
         ### perform window resize setups
 
         SCREEN_RECT.size = current_size
+        APP_REFS.zoom_manager.set_screen_size(current_size)
         APP_REFS.window_resize_setups()
 
         ### redraw the window manager
