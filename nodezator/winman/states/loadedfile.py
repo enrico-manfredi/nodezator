@@ -36,6 +36,9 @@ from pygame.locals import (
     K_t,
     K_3,
     K_j,
+    K_y,
+    K_z,
+    K_h,
     K_UP,
     K_LEFT,
     K_DOWN,
@@ -161,14 +164,27 @@ class LoadedFileState:
                 elif event.key == K_d and event.mod & KMOD_CTRL:
                     APP_REFS.ea.duplicate_selected()
 
-                ## undo/redo changes
+                ## undo/redo/history timeline
 
-                # XXX not (re)implemented yet
-                elif event.key == K_u:
-                    pass  # APP_REFS.ea.undo()
+                elif (
+                    event.key == K_z
+                    and event.mod & KMOD_CTRL
+                    and event.mod & KMOD_SHIFT
+                ):
+                    APP_REFS.history.redo()
 
-                elif event.key == K_r and KMOD_CTRL & event.mod:
-                    pass  # APP_REFS.ea.redo()
+                elif event.key == K_z and event.mod & KMOD_CTRL:
+                    APP_REFS.history.undo()
+
+                elif event.key == K_y and event.mod & KMOD_CTRL:
+                    APP_REFS.history.redo()
+
+                elif (
+                    event.key == K_h
+                    and event.mod & KMOD_CTRL
+                    and event.mod & KMOD_SHIFT
+                ):
+                    APP_REFS.history.present_history()
 
             ### KEYUP
 

@@ -62,6 +62,7 @@ from ..memoryman import free_up_memory
 # related to node editing
 
 from ..editing.main import EditingAssistant
+from ..editing.history import GraphHistory
 from ..graphman.main import GraphManager
 
 from ..graphman.nodepacksissues import (
@@ -162,6 +163,7 @@ class WindowManager(
 
         GraphManager()
         EditingAssistant()
+        GraphHistory()
 
         self.splash_screen = SplashScreen()
 
@@ -401,6 +403,21 @@ class WindowManager(
                 self.clean_loaded_file_data()
 
                 state_name = "no_file"
+
+        ### set up history before assigning state
+        if state_name == "loaded_file":
+
+            is_temp_file = APP_REFS.temp_filepaths_man.is_temp_path(
+                APP_REFS.source_path
+            )
+
+            APP_REFS.history.reset(
+                APP_REFS.data,
+                saved=not is_temp_file,
+            )
+
+        else:
+            APP_REFS.history.reset(None)
 
         ### set the state picked
         self.set_state(state_name)
