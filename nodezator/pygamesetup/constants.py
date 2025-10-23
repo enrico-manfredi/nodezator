@@ -105,15 +105,7 @@ set_repeat(
 
 ### create/set screen
 
-SIZE = (
-    # this value causes window size to equal screen resolution
-    (0, 0)
-    if get_sdl_version() >= (1, 2, 10)
-
-    # if sld isn't >= (1, 2, 10) though, it would raise an exception,
-    # so we need to provide a proper size
-    else (1280, 720)
-)
+SIZE = (1280, 800)
 
 
 ## under the circumstances in the if-block below, set_mode() raises
