@@ -2,6 +2,8 @@
 
 ### local imports
 
+from os import name as os_name
+
 from subprocess import Popen
 
 from shutil import which
@@ -257,8 +259,17 @@ class CallableNode(
             )
             return
 
+        script_arg = str(script_path)
+
+        use_shell = False
+        command = [code_command, script_arg]
+
+        if os_name == "nt" and code_command.lower().endswith((".cmd", ".bat")):
+            command = f'"{code_command}" "{script_arg}"'
+            use_shell = True
+
         try:
-            Popen([code_command, str(script_path)])
+            Popen(command, shell=use_shell)
 
         except Exception as err:
             logger.exception("Could not open VS Code for script %s", script_path)
