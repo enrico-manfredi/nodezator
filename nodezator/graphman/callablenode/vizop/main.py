@@ -114,7 +114,12 @@ class VisualOperations:
             elif method_name == "on_mouse_release":
 
                 self.mouse_click_target = False
+                is_double_click = self.register_left_release_and_check_double_click()
+
                 APP_REFS.ea.change_selection_state(self)
+
+                if is_double_click:
+                    self.open_script_in_vscode()
 
             elif method_name == "on_right_mouse_release":
                 self.show_popup_menu(event.pos)

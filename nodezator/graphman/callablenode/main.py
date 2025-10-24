@@ -2,10 +2,19 @@
 
 ### local imports
 
+from subprocess import Popen
+
+from shutil import which
+
+
 from ...config import APP_REFS
 
+from ...logman.main import get_new_logger
+
 from ...ourstdlibs.behaviour import empty_function
-from ...our3rdlibs.behaviour import indicate_unsaved
+from ...our3rdlibs.behaviour import indicate_unsaved, set_status_message
+
+from ...pygamesetup.constants import GENERAL_NS, FPS
 
 
 ## class extensions
@@ -33,6 +42,9 @@ from .surfs import SIGMODE_TOGGLE_BUTTON_MAP
 
 
 EMPTY_TUPLE = ()
+
+
+logger = get_new_logger(__name__)
 
 
 class CallableNode(
@@ -68,6 +80,8 @@ class CallableNode(
     ### instantiating the callable nodes and the editing
     ### assistant, when creating nodes in response to
     ### input from the user
+
+    double_click_frame_threshold = round(FPS * (0.25))
 
     def __init__(
         self,
@@ -198,6 +212,60 @@ class CallableNode(
             indicate_changes=False,
             first_setup=True
         )
+
+    def register_left_release_and_check_double_click(self):
+        """Return True if current release completes a double click."""
+
+        frame_index = GENERAL_NS.frame_index
+
+        last_frame = getattr(self, "_last_left_release_frame", float("-inf"))
+
+        frames_since_last = frame_index - last_frame
+
+        self._last_left_release_frame = frame_index
+
+        return frames_since_last <= self.double_click_frame_threshold
+
+    def open_script_in_vscode(self):
+        """Open the node script in Visual Studio Code, if possible."""
+
+        script_id = self.data.get("script_id")
+
+        if script_id is None:
+            set_status_message(
+                "Only nodes defined in node packs can be opened in VS Code."
+            )
+            return
+
+        script_path = APP_REFS.script_path_map.get(script_id)
+
+        if script_path is None:
+            set_status_message("Couldn't locate the script for this node.")
+            return
+
+        if not script_path.exists():
+            set_status_message(
+                "The script file for this node could not be found on disk."
+            )
+            return
+
+        code_command = which("code")
+
+        if code_command is None:
+            set_status_message(
+                "VS Code command-line interface not found. Install the 'code' command."
+            )
+            return
+
+        try:
+            Popen([code_command, str(script_path)])
+
+        except Exception as err:
+            logger.exception("Could not open VS Code for script %s", script_path)
+            set_status_message(f"Unable to open VS Code: {err}.")
+
+        else:
+            set_status_message(f"Opening {script_path.name} in VS Code...")
 
         ### initialize execution-related objects
         self.create_execution_support_objects()
