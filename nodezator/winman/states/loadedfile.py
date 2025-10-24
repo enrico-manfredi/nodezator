@@ -75,15 +75,6 @@ class LoadedFileState:
         """Get and respond to events."""
         for event in SERVICES_NS.get_events():
 
-            if hasattr(event, "pos"):
-                screen_pos = event.pos
-                event.screen_pos = screen_pos
-
-                if APP_REFS.ea.workspace_rect.collidepoint(screen_pos):
-                    event.pos = APP_REFS.ea.screen_to_workspace(screen_pos)
-                else:
-                    event.pos = screen_pos
-
             ### QUIT
 
             if event.type == QUIT:
@@ -93,18 +84,13 @@ class LoadedFileState:
 
             elif event.type == MOUSEWHEEL:
 
+                x, y = event.x*50, event.y*50
                 mod = SERVICES_NS.get_pressed_mod_keys()
 
-                if mod & KMOD_CTRL:
-                    APP_REFS.ea.change_zoom(event.y, SERVICES_NS.get_mouse_pos())
-                else:
+                if  mod & KMOD_SHIFT:
+                    x, y = y, x
 
-                    x, y = event.x * 50, event.y * 50
-
-                    if mod & KMOD_SHIFT:
-                        x, y = y, x
-
-                    APP_REFS.ea.scroll(x, y)
+                APP_REFS.ea.scroll(x, y)
 
             ### MOUSEMOTION
 
@@ -332,8 +318,7 @@ class LoadedFileState:
 
                 elif event.key == K_MENU:
 
-                    screen_pos = SERVICES_NS.get_mouse_pos()
-                    mouse_pos = APP_REFS.ea.screen_to_workspace(screen_pos)
+                    mouse_pos = SERVICES_NS.get_mouse_pos()
 
                     ### mark the mouse position for the
                     ### editing assistant, that is, the
@@ -349,7 +334,7 @@ class LoadedFileState:
                     APP_REFS.ea.popup_spawn_pos = mouse_pos
 
                     ### then give focus to the popup menu
-                    (self.canvas_popup_menu.focus_if_within_boundaries(screen_pos))
+                    (self.canvas_popup_menu.focus_if_within_boundaries(mouse_pos))
 
     def loaded_file_keyboard_input_handling(self):
         """Handle keyboard specific input."""
@@ -417,7 +402,6 @@ class LoadedFileState:
         """
         ### retrieve the mouse position
         mouse_pos = event.pos
-        screen_pos = getattr(event, "screen_pos", mouse_pos)
 
         ### check objects on screen for collision
 
@@ -477,7 +461,6 @@ class LoadedFileState:
         """
         ### retrieve the mouse position
         mouse_pos = event.pos
-        screen_pos = getattr(event, "screen_pos", mouse_pos)
 
         ### if the menu is hovered, we use it as the
         ### new loop holder in the application loop,
@@ -485,7 +468,7 @@ class LoadedFileState:
         ### the clicked_mouse flag to False, as an admin
         ### task
 
-        if self.menubar.get_hovered_menu(screen_pos):
+        if self.menubar.get_hovered_menu(mouse_pos):
 
             self.clicked_mouse = False
 
@@ -615,7 +598,6 @@ class LoadedFileState:
         """
         ### store the mouse position when released
         mouse_pos = event.pos
-        screen_pos = getattr(event, "screen_pos", mouse_pos)
 
         ### set the "clicked_mouse" flag off
         self.clicked_mouse = False
@@ -651,7 +633,7 @@ class LoadedFileState:
             ### the clicked_mouse flag to False, as an admin
             ### task
 
-            if self.menubar.get_hovered_menu(screen_pos):
+            if self.menubar.get_hovered_menu(mouse_pos):
 
                 self.clicked_mouse = False
 
@@ -671,7 +653,6 @@ class LoadedFileState:
         """
         ### retrieve mouse position
         mouse_pos = event.pos
-        screen_pos = getattr(event, "screen_pos", mouse_pos)
 
         ### check nodes for collision, executing its
         ### respective method if so and returning
@@ -702,11 +683,11 @@ class LoadedFileState:
             ### the canvas, as the position of the object
             ### (we have been using it as the midtop
             ### coordinate of new objects)
-            APP_REFS.ea.popup_spawn_pos = mouse_pos
+            APP_REFS.ea.popup_spawn_pos = event.pos
 
             ### then give focus to the popup menu
 
-            (self.canvas_popup_menu.focus_if_within_boundaries(screen_pos))
+            (self.canvas_popup_menu.focus_if_within_boundaries(event.pos))
 
     ### update
 
@@ -726,7 +707,6 @@ class LoadedFileState:
         APP_REFS.ea.grid_drawing_behaviour()
         APP_REFS.ea.draw_selected()
         APP_REFS.gm.draw()
-        APP_REFS.ea.draw_zoomed_workspace()
 
         for item in self.labels_drawing_methods:
             item()

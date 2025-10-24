@@ -14,7 +14,6 @@ from .selection import SelectionHandling
 from .reposition import Repositioning
 from .data import DataHandling
 from .birdseyeview import BirdsEyeViewHandling
-from .zoom import ZoomHandling
 
 ## more operations
 
@@ -71,7 +70,6 @@ class EditingAssistant(
     Repositioning,
     DataHandling,
     BirdsEyeViewHandling,
-    ZoomHandling,
 ):
     """Assist objects operations like selection/positioning.
 

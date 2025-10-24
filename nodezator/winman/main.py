@@ -194,13 +194,6 @@ class WindowManager(
         self.fix_menubar_size()
         self.create_separator_surface()
         self.reposition_labels()
-        workspace_rect = Rect(
-            0,
-            self.separator.rect.bottom,
-            SCREEN_RECT.width,
-            SCREEN_RECT.height - self.separator.rect.bottom,
-        )
-        APP_REFS.ea.update_workspace_rect(workspace_rect)
 
     def prepare_for_new_session(self):
         """Instantiate and set up objects.

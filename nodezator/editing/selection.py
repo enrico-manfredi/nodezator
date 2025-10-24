@@ -171,7 +171,7 @@ class SelectionHandling:
     def start_box_selection(self):
         """Prepare for box selection mode and set it."""
         ### store current mouse pos
-        self.initial_box_pos = APP_REFS.ea.get_workspace_mouse_pos()
+        self.initial_box_pos = SERVICES_NS.get_mouse_pos()
 
         ### get a copy of the scrolling amount by adding
         ### (0, 0) to it and store the copy as the initial
@@ -352,7 +352,7 @@ class SelectionHandling:
 
         ### the point 2 of the box is the current mouse
         ### position
-        box_point_2 = APP_REFS.ea.get_workspace_mouse_pos()
+        box_point_2 = SERVICES_NS.get_mouse_pos()
 
         ### now, using the points, define the data for
         ### the selection box

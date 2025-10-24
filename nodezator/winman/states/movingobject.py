@@ -168,7 +168,6 @@ class MovingObjectState:
         APP_REFS.ea.grid_drawing_behaviour()
         APP_REFS.ea.check_axis_line()
         APP_REFS.gm.draw()
-        APP_REFS.ea.draw_zoomed_workspace()
 
         for item in self.labels_drawing_methods:
             item()

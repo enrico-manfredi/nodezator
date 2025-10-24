@@ -56,7 +56,7 @@ class Repositioning:
         }
 
         ## backup mouse position
-        self.mouse_pos_backup = APP_REFS.ea.get_workspace_mouse_pos()
+        self.mouse_pos_backup = SERVICES_NS.get_mouse_pos()
 
         ## set window manager state
         APP_REFS.wm.set_state("moving_object")
@@ -66,7 +66,7 @@ class Repositioning:
 
     def track_mouse(self):
         """Transfer mouse relative pos to selected objs."""
-        current_x, current_y = APP_REFS.ea.get_workspace_mouse_pos()
+        current_x, current_y = SERVICES_NS.get_mouse_pos()
         start_x, start_y = self.mouse_pos_backup
 
         delta_x = current_x - start_x
