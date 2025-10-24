@@ -1,11 +1,17 @@
 """Facility for node class definition."""
 
+### standard library imports
+
+from shutil import which
+from subprocess import Popen
+
+
 ### local imports
 
 from ...config import APP_REFS
 
 from ...ourstdlibs.behaviour import empty_function
-from ...our3rdlibs.behaviour import indicate_unsaved
+from ...our3rdlibs.behaviour import indicate_unsaved, set_status_message
 
 
 ## class extensions
@@ -198,6 +204,53 @@ class CallableNode(
             indicate_changes=False,
             first_setup=True
         )
+
+    # double click -------------------------------------------------------
+
+    def on_double_click(self, _event=None):
+        """Open the node script in Visual Studio Code.
+
+        Parameters
+        ----------
+        _event : pygame.event.Event, optional
+            Event that triggered the action. The value isn't used, but the
+            parameter keeps compatibility with other mouse handlers.
+        """
+
+        script_id = self.data.get("script_id")
+
+        if script_id is None:
+            set_status_message(
+                "This node isn't associated with a node pack script."
+            )
+            return
+
+        try:
+            script_path = APP_REFS.script_path_map[script_id]
+        except KeyError:
+            set_status_message("Couldn't resolve the node script path.")
+            return
+
+        if not script_path.exists():
+            set_status_message(
+                f"The node script file can't be found: {script_path}"
+            )
+            return
+
+        vscode_executable = which("code")
+
+        if vscode_executable is None:
+            set_status_message(
+                "VS Code command 'code' isn't available in the PATH."
+            )
+            return
+
+        try:
+            Popen([vscode_executable, str(script_path)])
+        except OSError as err:
+            set_status_message(f"Couldn't launch VS Code: {err}")
+        else:
+            set_status_message(f"Opening {script_path.name} in VS Code.")
 
         ### initialize execution-related objects
         self.create_execution_support_objects()

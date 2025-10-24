@@ -179,6 +179,11 @@ class WindowManager(
         ### set flag indicating whether the mouse is clicked
         self.clicked_mouse = False
 
+        ### keep track of mouse release timing to detect double clicks on
+        ### graph objects
+        self.last_left_release_frame = -1
+        self.last_left_release_obj = None
+
         ### create background obj
         self.background = Object2D(rect=Rect(0, 0, 0, 0))
 

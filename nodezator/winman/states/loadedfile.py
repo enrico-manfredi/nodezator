@@ -54,6 +54,7 @@ from pygame.locals import (
 ### local imports
 
 from ...pygamesetup import SERVICES_NS
+from ...pygamesetup.constants import GENERAL_NS, FPS
 
 from ...config import APP_REFS
 
@@ -65,6 +66,10 @@ from ...loopman.exception import (
 )
 
 from ...htsl.main import open_htsl_link
+
+
+MAX_MSECS_TO_DOUBLE_CLICK = 250
+MAX_FRAMES_TO_DOUBLE_CLICK = round(FPS * (MAX_MSECS_TO_DOUBLE_CLICK / 1000))
 
 
 
@@ -624,6 +629,8 @@ class LoadedFileState:
 
         gm = APP_REFS.gm
 
+        frame_index = GENERAL_NS.frame_index
+
         for obj in chain(
             self.switches,
             gm.text_blocks.get_on_screen(),
@@ -634,7 +641,20 @@ class LoadedFileState:
 
             if obj.rect.collidepoint(mouse_pos):
 
+                is_double_click = (
+                    obj is self.last_left_release_obj
+                    and frame_index - self.last_left_release_frame
+                    <= MAX_FRAMES_TO_DOUBLE_CLICK
+                )
+
                 obj.on_mouse_release(event)
+
+                if is_double_click and hasattr(obj, "on_double_click"):
+                    obj.on_double_click(event)
+
+                self.last_left_release_frame = frame_index
+                self.last_left_release_obj = obj
+
                 break
 
         ### getting to this "else clause" means none of the
@@ -654,6 +674,8 @@ class LoadedFileState:
             if self.menubar.get_hovered_menu(screen_pos):
 
                 self.clicked_mouse = False
+                self.last_left_release_obj = None
+                self.last_left_release_frame = frame_index
 
                 raise SwitchLoopException(self.menubar)
 
@@ -663,6 +685,9 @@ class LoadedFileState:
             ## selected objects)
             else:
                 APP_REFS.ea.deselect_all()
+
+                self.last_left_release_obj = None
+                self.last_left_release_frame = frame_index
 
     def loaded_file_on_right_mouse_release(self, event):
         """Act on mouse right button release.
