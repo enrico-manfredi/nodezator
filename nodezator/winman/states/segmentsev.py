@@ -20,6 +20,15 @@ class SegmentSeveranceState:
         """Get and respond to events."""
         for event in SERVICES_NS.get_events():
 
+            if hasattr(event, "pos"):
+                screen_pos = event.pos
+                event.screen_pos = screen_pos
+
+                if APP_REFS.ea.workspace_rect.collidepoint(screen_pos):
+                    event.pos = APP_REFS.ea.screen_to_workspace(screen_pos)
+                else:
+                    event.pos = screen_pos
+
             ### QUIT
             if event.type == QUIT:
                 raise QuitAppException
@@ -58,6 +67,7 @@ class SegmentSeveranceState:
         APP_REFS.ea.draw_selected()
         APP_REFS.gm.draw()
         APP_REFS.gm.draw_temp_cutting_segment()
+        APP_REFS.ea.draw_zoomed_workspace()
 
         for item in self.labels_drawing_methods:
             item()

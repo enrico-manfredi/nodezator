@@ -98,7 +98,7 @@ class SegmentDefinitionState:
         if x_direction or y_direction or any(get_relative_mouse_pos()):
 
             APP_REFS.gm.look_for_nearby_compatible_socket(
-                SERVICES_NS.get_mouse_pos()
+                APP_REFS.ea.get_workspace_mouse_pos()
             )
 
     ### update
@@ -123,6 +123,7 @@ class SegmentDefinitionState:
         APP_REFS.ea.draw_selected()
         APP_REFS.gm.draw()
         APP_REFS.gm.draw_temp_segment()
+        APP_REFS.ea.draw_zoomed_workspace()
 
         for item in self.labels_drawing_methods:
             item()

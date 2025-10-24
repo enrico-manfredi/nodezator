@@ -120,6 +120,7 @@ class BoxSelectionState:
         APP_REFS.ea.draw_selected()
         APP_REFS.gm.draw()
         APP_REFS.ea.draw_selection_box()
+        APP_REFS.ea.draw_zoomed_workspace()
 
         for item in self.labels_drawing_methods:
             item()
