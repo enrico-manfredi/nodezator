@@ -57,7 +57,9 @@ def get_scrolling_amount(assistant):
 def format_zoom_factor(zoom_factor):
     """Return zoom factor as percentage text."""
 
-    return "zoom: {:>6.1f}%".format(zoom_factor * 100)
+    value = float(zoom_factor)
+
+    return "zoom: {:>6.1f}%".format(value * 100)
 
 
 ##### class definition
@@ -89,7 +91,7 @@ class MonitorLabelSetup:
         self.zoom_label = AutoLabel(
             partial(getattr, APP_REFS.ea, "zoom_factor"),
             formatter=format_zoom_factor,
-            text=format_zoom_factor(APP_REFS.ea.zoom_factor),
+            text=APP_REFS.ea.zoom_factor,
             **AUTOLABEL_KWARGS,
         )
 
