@@ -179,6 +179,13 @@ class WindowManager(
         ### set flag indicating whether the mouse is clicked
         self.clicked_mouse = False
 
+        ### data used to detect double clicks on nodes so we can open
+        ### their scripts in an external editor when appropriate
+        self._last_node_click_obj = None
+        self._last_node_click_time = 0.0
+        self._last_node_click_button = None
+        self._reported_missing_code_command = False
+
         ### create background obj
         self.background = Object2D(rect=Rect(0, 0, 0, 0))
 

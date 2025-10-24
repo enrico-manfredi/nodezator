@@ -3,6 +3,11 @@
 ### standard library import
 from itertools import chain
 
+from pathlib import Path
+from subprocess import DEVNULL, Popen
+from time import monotonic
+from shutil import which
+
 
 ### third-party imports
 
@@ -65,6 +70,32 @@ from ...loopman.exception import (
 )
 
 from ...htsl.main import open_htsl_link
+
+from ...our3rdlibs.behaviour import set_status_message
+
+
+### constants
+
+NODE_DOUBLE_CLICK_INTERVAL = 0.5
+
+
+def _get_vscode_command():
+    """Return path to Visual Studio Code command if available."""
+
+    command = getattr(_get_vscode_command, "_cached", None)
+
+    if command is None:
+
+        for executable_name in ("code", "code.cmd", "code.exe"):
+
+            command = which(executable_name)
+
+            if command is not None:
+                break
+
+        _get_vscode_command._cached = command
+
+    return command
 
 
 
@@ -436,9 +467,11 @@ class LoadedFileState:
                 try:
                     method = obj.on_mouse_click
                 except AttributeError:
-                    pass
+                    self._reset_node_double_click_data()
                 else:
                     method(event)
+
+                    self._handle_node_double_click(obj, event)
 
                 break
 
@@ -446,6 +479,90 @@ class LoadedFileState:
         ### any node, just set the "clicked_mouse" flag on
         else:
             self.clicked_mouse = True
+            self._reset_node_double_click_data()
+
+    def _handle_node_double_click(self, obj, event):
+        """Open node script in VS Code when double clicked."""
+
+        if event.button != 1:
+            self._reset_node_double_click_data()
+            return
+
+        data = getattr(obj, "data", None)
+
+        if not isinstance(data, dict):
+            self._reset_node_double_click_data()
+            return
+
+        script_id = data.get("script_id")
+
+        if not script_id:
+            self._reset_node_double_click_data()
+            return
+
+        last_obj = self._last_node_click_obj
+        last_button = self._last_node_click_button
+        last_time = self._last_node_click_time
+
+        now = monotonic()
+
+        if (
+            last_obj is obj
+            and last_button == event.button
+            and (now - last_time) <= NODE_DOUBLE_CLICK_INTERVAL
+        ):
+
+            self._open_node_script_in_vscode(script_id)
+            self._reset_node_double_click_data()
+
+        else:
+
+            self._last_node_click_obj = obj
+            self._last_node_click_time = now
+            self._last_node_click_button = event.button
+
+    def _open_node_script_in_vscode(self, script_id):
+        """Open the node script identified by *script_id* in VS Code."""
+
+        script_path = APP_REFS.script_path_map.get(script_id)
+
+        if script_path is None:
+            set_status_message("Couldn't locate node script on disk.")
+            return
+
+        script_path = Path(script_path)
+
+        if not script_path.exists():
+            set_status_message("Node script file is missing from disk.")
+            return
+
+        command = _get_vscode_command()
+
+        if command is None:
+
+            if not self._reported_missing_code_command:
+                set_status_message(
+                    "Visual Studio Code command 'code' was not found in PATH."
+                )
+                self._reported_missing_code_command = True
+
+            return
+
+        try:
+            Popen([command, str(script_path)], stdout=DEVNULL, stderr=DEVNULL)
+
+        except Exception as err:
+            set_status_message(f"Couldn't open VS Code: {err}")
+
+        else:
+            set_status_message(f"Opening {script_path.name} in VS Code...")
+
+    def _reset_node_double_click_data(self):
+        """Reset helper data used to detect node double clicks."""
+
+        self._last_node_click_obj = None
+        self._last_node_click_time = 0.0
+        self._last_node_click_button = None
 
     def loaded_file_on_mouse_motion(self, event):
         """Act based on mouse motion event.
