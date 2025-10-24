@@ -1,11 +1,18 @@
 """Facility for node class definition."""
 
+### standard library imports
+
+import os
+
+from subprocess import Popen
+
+
 ### local imports
 
 from ...config import APP_REFS
 
 from ...ourstdlibs.behaviour import empty_function
-from ...our3rdlibs.behaviour import indicate_unsaved
+from ...our3rdlibs.behaviour import indicate_unsaved, set_status_message
 
 
 ## class extensions
@@ -280,6 +287,9 @@ class CallableNode(
             self.mode_dependent_elements_svg_repr = self.callable_elements_svg_repr
 
         ###
+        self.adjust_open_script_button()
+
+        ###
         self.data['mode'] = mode_name
 
         ###
@@ -313,6 +323,44 @@ class CallableNode(
             surf_index = 1
 
         button.image = SIGMODE_TOGGLE_BUTTON_MAP[self.category_color][surf_index]
+
+    def adjust_open_script_button(self):
+        """Keep the open-script button aligned with the node roof."""
+
+        self.open_script_button.rect.topright = (
+            self.top_rectsman.move(-2, 0).bottomright
+        )
+
+    def open_node_script_in_code_editor(self, event=None):
+        """Open the Python script that defines this node in VS Code."""
+
+        script_id = self.data.get("script_id")
+
+        try:
+            script_path = APP_REFS.script_path_map[script_id]
+        except KeyError:
+            set_status_message("Couldn't locate script for this node.")
+            return
+
+        if not script_path.exists():
+            set_status_message("Node script file not found on disk.")
+            return
+
+        path_str = str(script_path)
+
+        command = ["code", path_str]
+
+        if os.name == "nt":
+            command = ["cmd", "/c", *command]
+
+        try:
+            Popen(command)
+        except FileNotFoundError:
+            set_status_message("VS Code command not found.")
+        except Exception:
+            set_status_message("Failed to open node script in VS Code.")
+        else:
+            set_status_message(f"Opening node script in VS Code: {path_str}")
 
     def perform_mode_related_viewer_setups(
         self,

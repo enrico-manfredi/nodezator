@@ -142,6 +142,7 @@ class VisualOperations:
             self.placeholder_sockets,
         )
 
+        yield self.open_script_button
         yield self.sigmode_toggle_button
 
     def yield_mouse_aware_objects_in_colmode(self):
@@ -152,9 +153,11 @@ class VisualOperations:
             self.visible_widgets,
         )
 
+        yield self.open_script_button
         yield self.sigmode_toggle_button
 
     def yield_mouse_aware_objects_in_calmode(self):
+        yield self.open_script_button
         yield from self.output_sockets
 
     def draw(self):
@@ -178,6 +181,7 @@ class VisualOperations:
             self.placeholder_sockets,
         )
 
+        yield self.open_script_button
         yield self.sigmode_toggle_button
 
     def yield_visible_objects_in_colmode(self):
@@ -189,6 +193,7 @@ class VisualOperations:
             self.visible_widgets,
         )
 
+        yield self.open_script_button
         yield self.sigmode_toggle_button
 
     def yield_visible_objects_in_calmode(self):
@@ -197,6 +202,8 @@ class VisualOperations:
             self.background_and_text_elements,
             self.output_sockets,
         )
+
+        yield self.open_script_button
 
     def draw_selection_outline(self, color):
         """Draw outline around to indicate it is selected."""

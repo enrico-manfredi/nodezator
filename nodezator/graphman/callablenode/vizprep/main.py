@@ -73,6 +73,9 @@ class VisualPreparations(
         ### create sigmode toggle button
         self.create_sigmode_toggle_button()
 
+        ### create button to open the node script in the editor
+        self.create_open_script_button()
+
         ### create elements situated on bottom of the node
         self.create_bottom_objects()
 
@@ -238,6 +241,23 @@ class VisualPreparations(
         button.rect = button.image.get_rect()
         button.rect.topleft = self.top_rectsman.move(2, 0).bottomleft
         button.on_mouse_release = self.toggle_sigmode
+
+    def create_open_script_button(self):
+        """Instantiate button used to open the node script in an editor."""
+
+        button = self.open_script_button = Object2D.from_surface(
+            render_text(
+                text=" code ",
+                font_height=FONT_HEIGHT,
+                foreground_color=NODE_TITLE,
+                background_color=self.category_color,
+                border_thickness=1,
+                border_color=NODE_TITLE,
+            )
+        )
+
+        button.rect.topright = self.top_rectsman.move(-2, 0).bottomright
+        button.on_mouse_release = self.open_node_script_in_code_editor
 
     def create_bottom_objects(self):
         """Create objects that lie at the node's bottom."""

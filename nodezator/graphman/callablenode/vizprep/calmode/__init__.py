@@ -55,6 +55,7 @@ class CallableModeVisualPreparations():
         all_rects = [
             self.rect,
             self.top_rectsman,
+            self.open_script_button.rect,
             self.title_text_obj.rect,
             self.body.rect,
             self.callable_output_socket.rect,
