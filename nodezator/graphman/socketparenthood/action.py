@@ -125,10 +125,15 @@ class UserActions:
 
         nodes_near_mouse = self.nodes_near_mouse
 
+        zoom = APP_REFS.ea.zoom_factor
+        scale = 1 / zoom if zoom else 1
+
+        inflate_amount = max(1, int(round(120 * scale)))
+
         nodes_near_mouse.extend(
             node
             for node in self.nodes_on_screen
-            if node.rect.inflate(120, 120).collidepoint(mouse_pos)
+            if node.rect.inflate(inflate_amount, inflate_amount).collidepoint(mouse_pos)
         )
 
         ### clear the collection of nodes on screen
@@ -183,7 +188,9 @@ class UserActions:
         ### now, if there is indeed a socket near the mouse, we can
         ### trigger segment definition from that socket
 
-        if closest_socket and mp.distance_to(closest_socket.rect.center) < 60:
+        proximity_threshold = 60 * scale
+
+        if closest_socket and mp.distance_to(closest_socket.rect.center) < proximity_threshold:
             self.trigger_defining_segment(closest_socket, mouse_pos)
 
     def look_for_nearby_compatible_socket(self, mouse_pos):
@@ -199,9 +206,15 @@ class UserActions:
         detection_distance = USER_PREFS['DETECTION_DISTANCE']
         grasping_distance = USER_PREFS['GRASPING_DISTANCE']
 
+        zoom = APP_REFS.ea.zoom_factor
+        scale = 1 / zoom if zoom else 1
+
+        detection_distance *= scale
+        grasping_distance *= scale
+
         ### define how much to inflate a node to obtain an area used to
         ### detect whether the mouse is close enough to a node
-        node_inflation = detection_distance * 2
+        node_inflation = max(1, int(round(detection_distance * 2)))
 
         ### assume there's no compatible socket nearby
         self.socket_b = self.socket_b_candidate = None
@@ -258,10 +271,10 @@ class UserActions:
 
                 self.socket_b_candidate = closest_socket
 
-                # offset_grasping_distance 
-                og_distance = grasping_distance - 5
+                # offset_grasping_distance
+                og_distance = max(0, grasping_distance - 5 * scale)
 
-                # difference_between_distances 
+                # difference_between_distances
                 difference = detection_distance - og_distance
 
                 # store percentage of difference from socket candidate

@@ -54,6 +54,12 @@ def get_scrolling_amount(assistant):
     return "({:>4}, {:>4})".format(*result)
 
 
+def format_zoom_factor(zoom_factor):
+    """Return zoom factor as percentage text."""
+
+    return "zoom: {:>6.1f}%".format(zoom_factor * 100)
+
+
 ##### class definition
 
 
@@ -80,6 +86,13 @@ class MonitorLabelSetup:
             **AUTOLABEL_KWARGS,
         )
 
+        self.zoom_label = AutoLabel(
+            partial(getattr, APP_REFS.ea, "zoom_factor"),
+            formatter=format_zoom_factor,
+            text=format_zoom_factor(APP_REFS.ea.zoom_factor),
+            **AUTOLABEL_KWARGS,
+        )
+
         ### position labels
         self.reposition_labels()
 
@@ -88,6 +101,7 @@ class MonitorLabelSetup:
         labels = (
             self.status_label,
             self.scrolling_label,
+            self.zoom_label,
         )
 
         self.labels_update_methods = [label.update for label in labels]
@@ -99,3 +113,8 @@ class MonitorLabelSetup:
         self.status_label.rect.bottomleft = SCREEN_RECT.bottomleft
 
         self.scrolling_label.rect.bottomleft = self.status_label.rect.topleft
+
+        self.zoom_label.rect.bottomleft = (
+            self.scrolling_label.rect.right + 10,
+            self.scrolling_label.rect.bottom,
+        )

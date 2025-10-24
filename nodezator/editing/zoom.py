@@ -24,7 +24,7 @@ from ..pygamesetup import SCREEN, SCREEN_RECT
 ### constants
 
 ZOOM_STEP = 0.1
-MIN_ZOOM = 0.4
+MIN_ZOOM = 0.1
 MAX_ZOOM = 2.5
 
 
