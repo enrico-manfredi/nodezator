@@ -1,11 +1,19 @@
 """Facility for node class definition."""
 
+### standard library imports
+
+from shutil import which
+from subprocess import Popen
+
+
 ### local imports
 
 from ...config import APP_REFS
 
+from ...logman.main import get_new_logger
+
 from ...ourstdlibs.behaviour import empty_function
-from ...our3rdlibs.behaviour import indicate_unsaved
+from ...our3rdlibs.behaviour import indicate_unsaved, set_status_message
 
 
 ## class extensions
@@ -33,6 +41,12 @@ from .surfs import SIGMODE_TOGGLE_BUTTON_MAP
 
 
 EMPTY_TUPLE = ()
+
+
+CODE_CMD = which("code")
+
+
+logger = get_new_logger(__name__)
 
 
 class CallableNode(
@@ -198,6 +212,39 @@ class CallableNode(
             indicate_changes=False,
             first_setup=True
         )
+
+    def on_double_click(self, event):
+        """Open the node's script in Visual Studio Code."""
+
+        script_id = self.data.get("script_id")
+
+        if not script_id:
+            return
+
+        try:
+            script_path = APP_REFS.script_path_map[script_id]
+        except KeyError:
+            logger.warning(
+                "Unable to open script for node %s: script path missing.",
+                script_id,
+            )
+            set_status_message("Node script path not found.")
+            return
+
+        if CODE_CMD is None:
+            set_status_message(
+                "VS Code command 'code' is not available on this system."
+            )
+            return
+
+        try:
+            Popen([CODE_CMD, str(script_path)])
+        except Exception:
+            logger.exception(
+                "Failed to open script %s in Visual Studio Code.",
+                script_path,
+            )
+            set_status_message("Couldn't open node script in VS Code.")
 
         ### initialize execution-related objects
         self.create_execution_support_objects()

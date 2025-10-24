@@ -635,6 +635,15 @@ class LoadedFileState:
             if obj.rect.collidepoint(mouse_pos):
 
                 obj.on_mouse_release(event)
+
+                if getattr(event, "clicks", 1) >= 2:
+                    try:
+                        on_double_click = obj.on_double_click
+                    except AttributeError:
+                        pass
+                    else:
+                        on_double_click(event)
+
                 break
 
         ### getting to this "else clause" means none of the
