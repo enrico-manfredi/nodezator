@@ -82,26 +82,32 @@ class ZoomHandling:
             self._zoom_view_pos.update(0, 0)
             return
 
-        world_rect = self._world_rect
         zoom = self._zoom_factor or 1.0
+        world_rect = self._world_rect
 
         view_width = rect.width / zoom
         view_height = rect.height / zoom
+
+        world_view_x = self._zoom_view_pos.x / zoom
+        world_view_y = self._zoom_view_pos.y / zoom
 
         min_x = world_rect.left
         min_y = world_rect.top
         max_x = world_rect.right - view_width
         max_y = world_rect.bottom - view_height
 
-        if view_width >= world_rect.width:
-            self._zoom_view_pos.x = world_rect.left - (view_width - world_rect.width) / 2
+        if world_rect.width <= 0 or view_width >= world_rect.width:
+            world_view_x = world_rect.left - (view_width - world_rect.width) / 2
         else:
-            self._zoom_view_pos.x = min(max(self._zoom_view_pos.x, min_x), max_x)
+            world_view_x = min(max(world_view_x, min_x), max_x)
 
-        if view_height >= world_rect.height:
-            self._zoom_view_pos.y = world_rect.top - (view_height - world_rect.height) / 2
+        if world_rect.height <= 0 or view_height >= world_rect.height:
+            world_view_y = world_rect.top - (view_height - world_rect.height) / 2
         else:
-            self._zoom_view_pos.y = min(max(self._zoom_view_pos.y, min_y), max_y)
+            world_view_y = min(max(world_view_y, min_y), max_y)
+
+        self._zoom_view_pos.x = world_view_x * zoom
+        self._zoom_view_pos.y = world_view_y * zoom
 
     def _relative_anchor(self, screen_pos):
         """Return anchor position relative to workspace."""
@@ -123,7 +129,8 @@ class ZoomHandling:
         if not rect.width or not rect.height:
             return pos
 
-        scaled_pos = (Vector2(pos) - self._zoom_view_pos) * self._zoom_factor
+        scaled_pos = Vector2(pos) * self._zoom_factor
+        scaled_pos -= self._zoom_view_pos
         scaled_pos += rect.topleft
 
         return tuple(int(round(value)) for value in scaled_pos)
@@ -137,11 +144,10 @@ class ZoomHandling:
             return pos
 
         relative = Vector2(pos) - rect.topleft
+        relative += self._zoom_view_pos
 
         if self._zoom_factor:
             relative /= self._zoom_factor
-
-        relative += self._zoom_view_pos
 
         return tuple(relative)
 
@@ -181,11 +187,11 @@ class ZoomHandling:
             return
 
         anchor = self._relative_anchor(anchor_screen_pos)
-        world_pos = Vector2(self.screen_to_workspace(anchor_screen_pos))
+        world_pos = (self._zoom_view_pos + anchor) / old_zoom
 
         self._zoom_factor = new_zoom
 
-        self._zoom_view_pos = world_pos - (anchor / new_zoom)
+        self._zoom_view_pos = world_pos * new_zoom - anchor
 
         self._constrain_zoom_view()
 
@@ -211,12 +217,15 @@ class ZoomHandling:
         view_width = max(1, int(round(rect.width / zoom)))
         view_height = max(1, int(round(rect.height / zoom)))
 
+        world_view_x = (self._zoom_view_pos.x / zoom)
+        world_view_y = (self._zoom_view_pos.y / zoom)
+
         view_surface = Surface((view_width, view_height)).convert(self._world_surface)
         view_surface.fill(self._world_background)
 
         src_rect = Rect(
-            int(round(self._zoom_view_pos.x - self._world_rect.left)),
-            int(round(self._zoom_view_pos.y - self._world_rect.top)),
+            int(round(world_view_x - self._world_rect.left)),
+            int(round(world_view_y - self._world_rect.top)),
             view_width,
             view_height,
         )
