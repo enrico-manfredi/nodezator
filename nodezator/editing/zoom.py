@@ -7,7 +7,7 @@ from math import isclose
 
 ### third-party imports
 
-from pygame import Rect
+from pygame import Rect, Surface
 
 from pygame.math import Vector2
 
@@ -17,6 +17,8 @@ from pygame.transform import smoothscale
 
 
 ### local imports
+
+from ..config import APP_REFS
 
 from ..pygamesetup import SCREEN, SCREEN_RECT
 
@@ -37,6 +39,13 @@ class ZoomHandling:
         self._zoom_factor = 1.0
         self._workspace_rect = Rect(0, 0, *SCREEN_RECT.size)
         self._zoom_view_pos = Vector2()
+        self._world_rect = Rect(self._workspace_rect)
+        self._world_surface = None
+        self._world_surface_rect = Rect(0, 0, 0, 0)
+        self._world_offset = Vector2()
+        self._world_scale = 1.0
+        self._world_background = None
+        self._world_has_content = False
 
     # properties ---------------------------------------------------------
 
@@ -53,6 +62,7 @@ class ZoomHandling:
             rect = Rect(0, 0, *SCREEN_RECT.size)
 
         self._workspace_rect = Rect(rect)
+        self._compute_world_rect()
         self._constrain_zoom_view()
 
     @property
@@ -72,14 +82,26 @@ class ZoomHandling:
             self._zoom_view_pos.update(0, 0)
             return
 
-        scaled_w = rect.width * self._zoom_factor
-        scaled_h = rect.height * self._zoom_factor
+        world_rect = self._world_rect
+        zoom = self._zoom_factor or 1.0
 
-        max_x = max(0, scaled_w - rect.width)
-        max_y = max(0, scaled_h - rect.height)
+        view_width = rect.width / zoom
+        view_height = rect.height / zoom
 
-        self._zoom_view_pos.x = min(max(self._zoom_view_pos.x, 0), max_x)
-        self._zoom_view_pos.y = min(max(self._zoom_view_pos.y, 0), max_y)
+        min_x = world_rect.left
+        min_y = world_rect.top
+        max_x = world_rect.right - view_width
+        max_y = world_rect.bottom - view_height
+
+        if view_width >= world_rect.width:
+            self._zoom_view_pos.x = world_rect.left - (view_width - world_rect.width) / 2
+        else:
+            self._zoom_view_pos.x = min(max(self._zoom_view_pos.x, min_x), max_x)
+
+        if view_height >= world_rect.height:
+            self._zoom_view_pos.y = world_rect.top - (view_height - world_rect.height) / 2
+        else:
+            self._zoom_view_pos.y = min(max(self._zoom_view_pos.y, min_y), max_y)
 
     def _relative_anchor(self, screen_pos):
         """Return anchor position relative to workspace."""
@@ -101,8 +123,7 @@ class ZoomHandling:
         if not rect.width or not rect.height:
             return pos
 
-        scaled_pos = Vector2(pos) * self._zoom_factor
-        scaled_pos -= self._zoom_view_pos
+        scaled_pos = (Vector2(pos) - self._zoom_view_pos) * self._zoom_factor
         scaled_pos += rect.topleft
 
         return tuple(int(round(value)) for value in scaled_pos)
@@ -117,10 +138,10 @@ class ZoomHandling:
 
         relative = Vector2(pos) - rect.topleft
 
-        relative += self._zoom_view_pos
-
         if self._zoom_factor:
             relative /= self._zoom_factor
+
+        relative += self._zoom_view_pos
 
         return tuple(relative)
 
@@ -137,21 +158,34 @@ class ZoomHandling:
         if not steps:
             return
 
+        self._compute_world_rect()
+
         old_zoom = self._zoom_factor
 
-        new_zoom = round(old_zoom + steps * ZOOM_STEP, 2)
-        new_zoom = max(MIN_ZOOM, min(MAX_ZOOM, new_zoom))
+        base = 1.0 + ZOOM_STEP
+        new_zoom = old_zoom * (base ** steps)
+
+        rect = self._workspace_rect
+        world = self._world_rect
+
+        min_zoom = MIN_ZOOM
+
+        if world.width and world.height:
+            width_ratio = rect.width / world.width if world.width else MIN_ZOOM
+            height_ratio = rect.height / world.height if world.height else MIN_ZOOM
+            min_zoom = min(min_zoom, width_ratio, height_ratio)
+
+        new_zoom = max(min_zoom, min(MAX_ZOOM, new_zoom))
 
         if isclose(new_zoom, old_zoom, rel_tol=1e-3):
             return
 
         anchor = self._relative_anchor(anchor_screen_pos)
-
-        world_pos = (self._zoom_view_pos + anchor) / old_zoom
+        world_pos = Vector2(self.screen_to_workspace(anchor_screen_pos))
 
         self._zoom_factor = new_zoom
 
-        self._zoom_view_pos = world_pos * new_zoom - anchor
+        self._zoom_view_pos = world_pos - (anchor / new_zoom)
 
         self._constrain_zoom_view()
 
@@ -169,47 +203,138 @@ class ZoomHandling:
 
         if isclose(zoom, 1.0, rel_tol=1e-3) and self._zoom_view_pos.length_squared() < 1:
             return
+        self._update_world_surface()
 
-        area = SCREEN.subsurface(rect).copy()
+        if self._world_surface is None:
+            return
 
-        scaled_size = (
-            max(1, int(round(rect.width * zoom))),
-            max(1, int(round(rect.height * zoom))),
+        view_width = max(1, int(round(rect.width / zoom)))
+        view_height = max(1, int(round(rect.height / zoom)))
+
+        view_surface = Surface((view_width, view_height)).convert(self._world_surface)
+        view_surface.fill(self._world_background)
+
+        src_rect = Rect(
+            int(round(self._zoom_view_pos.x - self._world_rect.left)),
+            int(round(self._zoom_view_pos.y - self._world_rect.top)),
+            view_width,
+            view_height,
         )
 
-        scaled = smoothscale(area, scaled_size)
+        clipped = src_rect.clip(self._world_surface_rect)
 
-        result = area.copy()
-        fill_color = area.get_at((0, 0))
-        result.fill(fill_color)
+        if clipped.width and clipped.height:
+            dest = (
+                clipped.left - src_rect.left,
+                clipped.top - src_rect.top,
+            )
+            view_surface.blit(self._world_surface, dest, clipped)
 
-        scaled_rect = Rect((0, 0), scaled_size)
-
-        if scaled_rect.width <= rect.width:
-            view_width = scaled_rect.width
-            src_x = 0
-            dest_x = (rect.width - view_width) // 2
+        if view_surface.get_size() == rect.size:
+            SCREEN.blit(view_surface, rect.topleft)
         else:
-            view_width = rect.width
-            max_x = scaled_rect.width - view_width
-            src_x = min(max(int(round(self._zoom_view_pos.x)), 0), max_x)
-            dest_x = 0
+            scaled = smoothscale(view_surface, rect.size)
+            SCREEN.blit(scaled, rect.topleft)
 
-        if scaled_rect.height <= rect.height:
-            view_height = scaled_rect.height
-            src_y = 0
-            dest_y = (rect.height - view_height) // 2
-        else:
-            view_height = rect.height
-            max_y = scaled_rect.height - view_height
-            src_y = min(max(int(round(self._zoom_view_pos.y)), 0), max_y)
-            dest_y = 0
+    # world surface management -----------------------------------------
 
-        view_rect = Rect(src_x, src_y, view_width, view_height)
+    def _compute_world_rect(self):
+        """Refresh world rect/offset from graph data."""
 
-        cropped = scaled.subsurface(view_rect)
+        rect = self._workspace_rect
 
-        result.blit(cropped, (dest_x, dest_y))
+        if not rect.width or not rect.height:
+            self._world_rect = Rect(rect)
+            self._world_offset.update(0, 0)
+            self._world_has_content = False
+            return
 
-        SCREEN.blit(result, rect.topleft)
+        gm = getattr(APP_REFS, "gm", None)
+
+        has_objects = False
+        union_rect = None
+
+        if gm is not None:
+            has_objects = any(
+                (
+                    gm.nodes,
+                    gm.text_blocks,
+                    gm.preview_panels,
+                    gm.preview_toolbars,
+                )
+            )
+
+            if has_objects:
+                try:
+                    union_rect = gm.rectsman.union_rect.copy()
+                except RuntimeError:
+                    has_objects = False
+
+        if not has_objects or union_rect is None:
+            union_rect = Rect(rect)
+
+        if not union_rect.width:
+            union_rect.width = max(1, rect.width)
+
+        if not union_rect.height:
+            union_rect.height = max(1, rect.height)
+
+        self._world_rect = union_rect
+        self._world_offset.update(-union_rect.left, -union_rect.top)
+        self._world_has_content = has_objects
+
+    def _update_world_surface(self):
+        """Build world surface reflecting current graph state."""
+
+        self._compute_world_rect()
+
+        world_rect = self._world_rect
+        rect = self._workspace_rect
+
+        width = max(1, world_rect.width)
+        height = max(1, world_rect.height)
+
+        background = SCREEN.get_at(rect.topleft)
+
+        world_surface = Surface((width, height)).convert(SCREEN)
+        world_surface.fill(background)
+
+        gm = getattr(APP_REFS, "gm", None)
+
+        if gm is not None and self._world_has_content:
+            dx = -world_rect.left
+            dy = -world_rect.top
+            moved = False
+
+            if dx or dy:
+                try:
+                    gm.rectsman.move_ip(dx, dy)
+                except RuntimeError:
+                    pass
+                else:
+                    moved = True
+
+            try:
+                for panel in gm.preview_panels:
+                    panel.draw_on_surf(world_surface)
+
+                for toolbar in gm.preview_toolbars:
+                    toolbar.draw_on_surf(world_surface)
+
+                gm.draw_lines_on_surf(world_surface)
+
+                for node in gm.nodes:
+                    node.draw_on_surf(world_surface)
+
+                gm.text_blocks.draw_on_surf(world_surface)
+
+            finally:
+                if moved:
+                    gm.rectsman.move_ip(-dx, -dy)
+
+        self._world_surface = world_surface
+        self._world_surface_rect = world_surface.get_rect()
+        self._world_background = background
+        self._world_scale = 1.0
+        self._constrain_zoom_view()
 
