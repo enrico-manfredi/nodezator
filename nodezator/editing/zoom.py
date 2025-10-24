@@ -59,7 +59,7 @@ class ZoomHandling:
     def zoom_factor(self):
         """Return current zoom factor."""
 
-        return self._zoom_factor
+        return getattr(self, "_zoom_factor", 1.0)
 
     # helpers ------------------------------------------------------------
 
