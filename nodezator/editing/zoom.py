@@ -25,7 +25,10 @@ from ..colorsman.colors import (
     SMALL_GRID_COLOR,
     ACTIVE_SELECTION,
     NORMAL_SELECTION,
+    CUTTING_SEGMENT,
 )
+
+from ..graphman.socketparenthood.draw import connectionassist as connection_draw
 
 
 ### constants
@@ -150,6 +153,7 @@ class ZoomHandling:
             self._draw_world_objects(world_surface)
             self._draw_world_lines(world_surface)
             self._draw_world_selection(world_surface)
+            self._draw_world_overlays(world_surface, delta)
         finally:
             gm.rectsman.move_ip(-delta)
 
@@ -223,6 +227,43 @@ class ZoomHandling:
                 rect = obj.rect.inflate(4, 4)
 
             draw_rect(surf, color, rect, 4)
+
+    def _draw_world_overlays(self, surf, delta):
+        """Draw temporary connection helpers onto the world surface."""
+
+        wm = APP_REFS.wm
+        gm = APP_REFS.gm
+
+        if wm.state_name != "segment_definition":
+            return
+
+        if not hasattr(gm, "socket_a"):
+            return
+
+        old_screen = connection_draw.SCREEN
+        old_blit = connection_draw.blit_on_screen
+        old_rect = connection_draw.SCREEN_RECT
+        old_clip = connection_draw.clip_segment
+
+        connection_draw.SCREEN = surf
+        connection_draw.blit_on_screen = surf.blit
+        connection_draw.SCREEN_RECT = surf.get_rect()
+
+        def passthrough(start, end):
+            return start, end
+
+        connection_draw.clip_segment = passthrough
+
+        gm.magnet_point += delta
+
+        try:
+            gm.draw_temp_segment()
+        finally:
+            gm.magnet_point -= delta
+            connection_draw.SCREEN = old_screen
+            connection_draw.blit_on_screen = old_blit
+            connection_draw.SCREEN_RECT = old_rect
+            connection_draw.clip_segment = old_clip
 
     # clamping -----------------------------------------------------------
 
@@ -318,5 +359,41 @@ class ZoomHandling:
             )
             view_surface.blit(self._world_surface, dest, intersection)
 
+        self._draw_zoom_overlays(view_surface, self._view_topleft)
+
         scaled = smoothscale(view_surface, rect.size)
         SCREEN.blit(scaled, rect.topleft)
+
+    def _draw_zoom_overlays(self, surf, view_origin):
+        """Draw overlays like selection box and cutting segment."""
+
+        wm = APP_REFS.wm
+        gm = APP_REFS.gm
+        ea = APP_REFS.ea
+        offset = Vector2(view_origin)
+
+        selection_rect = getattr(ea, "selection_box", None)
+        if selection_rect is not None and min(selection_rect.size) >= 4:
+            top_left = Vector2(selection_rect.topleft) - offset
+            draw_rect(
+                surf,
+                NORMAL_SELECTION,
+                Rect(
+                    int(round(top_left.x)),
+                    int(round(top_left.y)),
+                    selection_rect.width,
+                    selection_rect.height,
+                ),
+                2,
+            )
+
+        if wm.state_name == "segment_severance" and hasattr(gm, "cut_start_pos"):
+            start = Vector2(gm.cut_start_pos) - offset
+            end = Vector2(ea.get_workspace_mouse_pos()) - offset
+            draw_line(
+                surf,
+                CUTTING_SEGMENT,
+                (int(round(start.x)), int(round(start.y))),
+                (int(round(end.x)), int(round(end.y))),
+                3,
+            )
